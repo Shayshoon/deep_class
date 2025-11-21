@@ -66,13 +66,17 @@ def create_train_validation_loaders(
     train_size = len(dataset) - val_size
     train_data, val_data = torch.utils.data.random_split(dataset, [train_size, val_size])
     dl_train = torch.utils.data.DataLoader(
-        train_data, batch_size=batch_size, num_workers=num_workers,
-        sampler=torch.utils.data.SubsetRandomSampler(train_data), 
-    )
+        train_data,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+     )
     dl_valid = torch.utils.data.DataLoader(
-        val_data, batch_size=batch_size, num_workers=num_workers,
-        sampler=torch.utils.data.SubsetRandomSampler(val_data),
-    )
+        val_data,
+        batch_size=batch_size,
+        shuffle=False,
+        num_workers=num_workers,
+     )
     # ========================
 
     return dl_train, dl_valid

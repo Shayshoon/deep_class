@@ -106,7 +106,49 @@ class LinearClassifier(object):
             #     using the weight_decay parameter.
 
             # ====== YOUR CODE: ======
-            print(dl_train)
+            total_loss = 0
+            total_samples = 0
+ 
+            for x_batch, y_batch in dl_train:
+                y_pred , scores = self.predict(x_batch)
+                loss = loss_fn.loss(x_batch, y_batch, scores, y_pred)
+                loss += (weight_decay / 2) * torch.sum(self.weights ** 2)
+ 
+                grad = loss_fn.grad()
+                grad += weight_decay * self.weights
+
+                self.weights -= learn_rate * grad
+
+                total_loss += loss.item() * x_batch.shape[0]
+                total_correct += torch.sum(y_pred == y_batch).item()
+                total_samples += x_batch.shape[0]
+
+            train_res.accuracy.append(total_correct / total_samples * 100)
+            train_res.loss.append(total_loss / total_samples)
+
+            total_valid_loss = 0
+            total_valid_correct = 0
+            total_valid_samples = 0
+            
+            for x_batch, y_batch in dl_valid:
+                y_pred, scores = self.predict(x_batch)
+                
+                # Calculate Data Loss
+                loss_data = loss_fn.loss(x_batch, y_batch, scores, y_pred)
+                
+                # Calculate Total Loss for tracking (includes regularization)
+                loss_total = loss_data + (weight_decay / 2) * torch.sum(self.weights ** 2)
+                
+                # Accumulate Metrics
+                total_valid_loss += loss_total.item() * x_batch.shape[0]
+                total_valid_correct += torch.sum(y_pred == y_batch).item()
+                total_valid_samples += x_batch.shape[0]
+
+            # Save epoch results for validation set
+            valid_res.accuracy.append(total_valid_correct / total_valid_samples * 100)
+            valid_res.loss.append(total_valid_loss / total_valid_samples)
+
+            
             # ========================
             print(".", end="")
 
@@ -127,7 +169,16 @@ class LinearClassifier(object):
         #  The output shape should be (n_classes, C, H, W).
 
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        channels, h, w = img_shape
+        weights = self.weights.t()
+        
+        if (has_bias):
+            weights = weights[:, 2:]
+        
+        w_images = weights.reshape(self.n_classes,h, w).unsqueeze(1)
+
+        if channels is not None and channels > 1:
+            w_images = w_images.repeat(1, channels, 1, 1)
         # ========================
 
         return w_images
@@ -140,7 +191,9 @@ def hyperparams():
     #  Manually tune the hyperparameters to get the training accuracy test
     #  to pass.
     # ====== YOUR CODE: ======
-    # raise NotImplementedError()
+    hp["weight_std"]=0.0
+    hp["learn_rate"]=0.01
+    hp["weight_decay"]=0.01
     # ========================
 
     return hp

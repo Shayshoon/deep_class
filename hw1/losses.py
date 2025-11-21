@@ -58,14 +58,14 @@ class SVMHingeLoss(ClassifierLoss):
 
         correct_scores = x_scores[torch.arange(N), y].unsqueeze(1)
         margins = x_scores - correct_scores + self.delta
-
-        margins[torch.arange(N), y] = 0.0
-        loss = margins.sum() / N
+        hinge_loss = torch.clamp(margins, min=0.0)
+        hinge_loss[torch.arange(N), y] = 0.0
+        loss = hinge_loss.sum() / N
         # ========================
 
         # TODO: Save what you need for gradient calculation in self.grad_ctx
         # ====== YOUR CODE: ======
-        binary = (margins > 0).float()
+        binary = (hinge_loss > 0).float()
         row_sum = binary.sum(dim=1)
 
         binary[torch.arange(N), y] = -row_sum
