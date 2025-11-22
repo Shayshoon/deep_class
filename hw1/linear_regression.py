@@ -32,7 +32,8 @@ class LinearRegressor(BaseEstimator, RegressorMixin):
 
         y_pred = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        y_pred = (X @ self.weights_)
+        
         # ========================
 
         return y_pred
@@ -51,7 +52,11 @@ class LinearRegressor(BaseEstimator, RegressorMixin):
 
         w_opt = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        eye = np.eye(X.shape[1]) * X.shape[0]
+        eye[0,0] = 0
+        A = X.T @ X + self.reg_lambda * eye
+        B = X.T @ y
+        w_opt = np.linalg.inv(A) @ B
         # ========================
 
         self.weights_ = w_opt
@@ -77,7 +82,12 @@ def fit_predict_dataframe(
     """
     # TODO: Implement according to the docstring description.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    subset_x = df.drop(target_name, axis=1, inplace=False)
+    if (feature_names is not None):
+        subset_x = df[feature_names]
+        
+    subset_y = df[target_name]
+    y_pred = model.fit_predict(subset_x, subset_y)
     # ========================
     return y_pred
 
@@ -97,10 +107,12 @@ class BiasTrickTransformer(BaseEstimator, TransformerMixin):
         # TODO:
         #  Add bias term to X as the first feature.
         #  See np.hstack().
+        
 
         xb = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        b = np.ones((X.shape[0],1), dtype=int)
+        xb = np.hstack((b, X))
         # ========================
 
         return xb
@@ -117,7 +129,7 @@ class BostonFeaturesTransformer(BaseEstimator, TransformerMixin):
         # TODO: Your custom initialization, if needed
         # Add any hyperparameters you need and save them as above
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        self.poly = PolynomialFeatures(degree=self.degree, include_bias=False)
         # ========================
 
     def fit(self, X, y=None):
@@ -139,7 +151,11 @@ class BostonFeaturesTransformer(BaseEstimator, TransformerMixin):
 
         X_transformed = None
         # ====== YOUR CODE: ======
-        raise NotImplementedError()
+        X_transformed = X.copy()
+        X_transformed[0] =np.log1p(X_transformed[0])
+        X_transformed[13] =np.log1p(X_transformed[13])
+        X_transformed = np.delete(X, 3, 1)
+        X_transformed = self.poly.fit_transform(X_transformed)
         # ========================
 
         return X_transformed
@@ -163,7 +179,10 @@ def top_correlated_features(df: DataFrame, target_feature, n=5):
     # TODO: Calculate correlations with target and sort features by it
 
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    corrolations = df.corr('pearson')[target_feature].drop(labels=target_feature)
+    top_correlations = corrolations.abs().sort_values(ascending=False)[:n]
+    top_n_features = top_correlations.index
+    top_n_corr = top_correlations.values
     # ========================
 
     return top_n_features, top_n_corr
@@ -179,7 +198,7 @@ def mse_score(y: np.ndarray, y_pred: np.ndarray):
 
     # TODO: Implement MSE using numpy.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    mse = ((y - y_pred)**2).mean()
     # ========================
     return mse
 
@@ -194,7 +213,11 @@ def r2_score(y: np.ndarray, y_pred: np.ndarray):
 
     # TODO: Implement R^2 using numpy.
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    dividend = np.sum((y - y_pred) ** 2)
+    y_mean = np.mean(y)
+    divisor = np.sum((y - y_mean) ** 2)
+
+    r2 = 1 - (dividend / divisor)
     # ========================
     return r2
 
@@ -227,7 +250,20 @@ def cv_best_hyperparams(
     #  - You can use MSE or R^2 as a score.
 
     # ====== YOUR CODE: ======
-    raise NotImplementedError()
+    param_grid = {
+        'bostonfeaturestransformer__degree': degree_range,
+        'linearregressor__reg_lambda': lambda_range,
+    }
+    splitter = sklearn.model_selection.KFold(n_splits=k_folds, shuffle=True) 
+    grid_search = sklearn.model_selection.GridSearchCV( 
+        estimator=model,
+        param_grid=param_grid,
+        scoring='neg_mean_squared_error', # ‘r2’
+        cv=splitter
+    )
+
+    grid_search.fit(X, y)
+    best_params = grid_search.best_params_
     # ========================
 
     return best_params
